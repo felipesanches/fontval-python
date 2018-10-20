@@ -32,16 +32,15 @@ else:
 class Download(Command):
 
     user_options = [
-        ("version=", None, "ots source version number to download"),
+        ("version=", None, "fontval source version number to download"),
         ("sha256=", None, "expected SHA-256 hash of the source archive"),
-        ("download-dir=", "d", "where to unpack the 'ots' dir (default: src/c)"),
+        ("download-dir=", "d", "where to unpack the 'fontval' dir (default: src/c)"),
         ("clean", None, "remove existing directory before downloading"),
     ]
     boolean_options = ["clean"]
 
     URL_TEMPLATE = (
-        "https://github.com/khaledhosny/ots/releases/download/"
-        "v{version}/ots-{version}.tar.xz"
+        "https://github.com/HinTak/Font-Validator/archive/FontVal-{version}.tar.gz"
     )
 
     def initialize_options(self):
@@ -62,7 +61,7 @@ class Download(Command):
             raise DistutilsSetupError("must specify --sha256 of downloaded file")
 
         if self.download_dir is None:
-            self.download_dir = os.path.join("src", "c")
+            self.download_dir = os.path.join("src", "cs")
 
         self.url = self.URL_TEMPLATE.format(**vars(self))
 
@@ -70,10 +69,10 @@ class Download(Command):
         from urllib.request import urlopen
         from io import BytesIO
         import tarfile
-        import lzma
+        import gzip
         import hashlib
 
-        output_dir = os.path.join(self.download_dir, "ots")
+        output_dir = os.path.join(self.download_dir, "fval")
         if self.clean and os.path.isdir(output_dir):
             remove_tree(output_dir, verbose=self.verbose, dry_run=self.dry_run)
 
@@ -106,18 +105,18 @@ class Download(Command):
 
             log.info("unarchiving {} to {}".format(archive_name, output_dir))
             if not self.dry_run:
-                with lzma.open(f) as xz:
-                    with tarfile.open(fileobj=xz) as tar:
+                with gzip.open(f) as gz:
+                    with tarfile.open(fileobj=gz) as tar:
                         filelist = tar.getmembers()
                         first = filelist[0]
-                        if not (first.isdir() and first.name.startswith("ots")):
+                        if not (first.isdir() and first.name.startswith("Font-Validator-")):
                             from distutils.errors import DistutilsSetupError
 
                             raise DistutilsSetupError(
                                 "The downloaded archive is not recognized as "
-                                "a valid ots source tarball"
+                                "a valid fval source tarball"
                             )
-                        # strip the root 'ots-X.X.X' directory before extracting
+                        # strip the root 'fval-X.X.X' directory before extracting
                         rootdir = first.name + "/"
                         to_extract = []
                         for member in filelist[1:]:
@@ -129,7 +128,7 @@ class Download(Command):
 
 class Executable(Extension):
 
-    if os.name == "nt":
+    if os.name in ["nt", "posix"]: #the FontVal Makefile generates a .exe regardless of platform. 
         suffix = ".exe"
     else:
         suffix = ""
@@ -202,12 +201,29 @@ class ExecutableBuildExt(build_ext):
         mkpath(os.path.dirname(dest_path), verbose=self.verbose, dry_run=self.dry_run)
 
         copy_file(exe_fullpath, dest_path, verbose=self.verbose, dry_run=self.dry_run)
+        dest_path = os.path.dirname(dest_path)
+        # I have the impression that this is not the ideal place to declare
+        # this list of files, but for now that's good enough.
+        # I would appreciate some input form Cosimo here on a better approach.
+        # -- Felipe Sanches
+        for dll_filename in ["Compat.dll",
+                             "Glyph.dll",
+                             "IronPython.dll",
+                             "mono-webkit.dll",
+                             "OTFontFileVal.dll",
+                             "ValCommon.dll",
+                             "GMath.dll",
+                             "IronPython.Modules.dll",
+                             "OTFontFile.dll",
+                             "SharpFont.dll"]:
+          dll_fullpath = os.path.join(ext.output_dir, dll_filename)
+          copy_file(dll_fullpath, dest_path, verbose=self.verbose, dry_run=self.dry_run)
 
 
 class CustomEggInfo(egg_info):
 
     def run(self):
-        # make sure the ots source is downloaded before creating sdist manifest
+        # make sure the fval source is downloaded before creating sdist manifest
         self.run_command("download")
         egg_info.run(self)
 
@@ -216,27 +232,27 @@ cmdclass["download"] = Download
 cmdclass["build_ext"] = ExecutableBuildExt
 cmdclass["egg_info"] = CustomEggInfo
 
-ots_sanitize = Executable(
-    "ots.ots-sanitize", script="build.py", output_dir=os.path.join("build", "meson")
+font_val = Executable(
+    "fontval.FontValidator", script="build.py", output_dir=os.path.join("src", "cs", "fval", "bin")
 )
 
 with open("README.md", "r", encoding="utf-8") as readme:
     long_description = readme.read()
 
 setup(
-    name="opentype-sanitizer",
-    use_scm_version={"write_to": "src/python/ots/_version.py"},
-    description=("Python wrapper for the OpenType Sanitizer"),
+    name="font-validator",
+    use_scm_version={"write_to": "src/python/fontval/_version.py"},
+    description=("Python wrapper for the Font Validator"),
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="Cosimo Lupo",
-    author_email="cosimo@anthrotype.com",
-    url="https://github.com/anthrotype/ots-python",
+    author="Felipe Sanches",
+    author_email="juca@members.fsf.org",
+    url="https://github.com/googlefonts/fontval-python",
     license="OpenSource, BSD-style",
     platforms=["posix", "nt"],
     package_dir={"": "src/python"},
     packages=find_packages("src/python"),
-    ext_modules=[ots_sanitize],
+    ext_modules=[font_val],
     zip_safe=False,
     cmdclass=cmdclass,
     setup_requires=["setuptools_scm"],

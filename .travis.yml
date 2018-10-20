@@ -50,9 +50,9 @@ script:
 after_success:
   # If it's a tagged commit, upload sdist and wheel packages to PyPI.
   - |
-    if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_REPO_SLUG" == "googlefonts/ots-python" ]; then
+    if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_REPO_SLUG" == "googlefonts/fontval-python" ]; then
         pip install --upgrade twine
-        twine upload wheelhouse/opentype_sanitizer*.whl
+        twine upload wheelhouse/font_validator*.whl
         if [ "$BUILD_SDIST" == true ]; then
             pip install --upgrade setuptools setuptools_scm
             python setup.py sdist

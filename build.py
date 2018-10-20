@@ -12,29 +12,17 @@ import shutil
 import errno
 import argparse
 
-
+version = "2.1.2" #FIXME! Auto-detect this.
 ROOT = Path(__file__).parent.resolve()
-BUILD_ROOT = ROOT / "build"
-BUILD_DIR = BUILD_ROOT / "meson"
-SRC_DIR = ROOT.joinpath("src", "c", "ots")
+SRC_DIR = ROOT.joinpath("src", "cs", "fval")
 
 TOOLS = {
-    "meson": os.environ.get("MESON_EXE", "meson"),
-    "ninja": os.environ.get("NINJA_EXE", "ninja"),
+    "make": os.environ.get("MAKE_EXE", "make"),
 }
 
-MESON_CMD = [
-    TOOLS["meson"],
-    "--backend=ninja",
-    "--buildtype=release",
-    "--strip",
-    "-Ddebug=true",
-    str(BUILD_DIR),
-    str(SRC_DIR),
+MAKE_CMD = [
+  TOOLS["make"]
 ]
-
-NINJA_CMD = [TOOLS["ninja"], "-C", str(BUILD_DIR)]
-
 
 class ExecutableNotFound(FileNotFoundError):
     def __init__(self, name, path):
@@ -49,17 +37,18 @@ def check_tools():
 
 
 def configure(reconfigure=False):
-    if not (BUILD_DIR / "build.ninja").exists():
-        subprocess.run(MESON_CMD, check=True, env=os.environ)
-    elif reconfigure:
-        subprocess.run(MESON_CMD + ["--reconfigure"], check=True, env=os.environ)
+    pass
 
 
 def make(*targets, clean=False):
     targets = list(targets)
-    if clean:
-        subprocess.run(NINJA_CMD + ["-t", "clean"] + targets, check=True, env=os.environ)
-    subprocess.run(NINJA_CMD + targets, check=True, env=os.environ)
+    print (f"Targets are: {targets}")
+    _env = '\n'.join([f"{k}:\t\t{v}" for k,v in os.environ.items()])
+    print ("os.getcwd(): {}".format(os.getcwd()))
+    os.chdir(SRC_DIR)
+    print ("os.getcwd(): {}".format(os.getcwd()))
+    #subprocess.run(MAKE_CMD + targets, check=True, env=os.environ)
+    subprocess.run(MAKE_CMD, check=True, env=os.environ)
 
 
 def main(args=None):

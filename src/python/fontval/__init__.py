@@ -3,9 +3,9 @@ import subprocess
 import sys
 import os
 
-OTS_SANITIZE = os.path.join(os.path.dirname(__file__), "ots-sanitize")
+FONT_VALIDATOR = os.path.join(os.path.dirname(__file__), "FontValidator.exe")
 
-__all__ = ["sanitize", "OTSError", "CalledProcessError"]
+__all__ = ["run_checks", "FValError", "CalledProcessError"]
 
 
 try:
@@ -14,13 +14,13 @@ except ImportError:
     __version__ = "0.0.0+unknown"
 
 
-class OTSError(Exception):
+class FValError(Exception):
     pass
 
 
 # subprocess.CalledProcessError on python < 3.5 doesn't have 'stderr' argument.
 # Regardless, it's a good idea to wrap subprocess' exceptions with our own.
-class CalledProcessError(OTSError, subprocess.CalledProcessError):
+class CalledProcessError(FValError, subprocess.CalledProcessError):
     def __init__(self, returncode, cmd, output=None, stderr=None):
         subprocess.CalledProcessError.__init__(self, returncode, cmd, output=output)
         self.stderr = stderr
@@ -73,14 +73,14 @@ def _run(args, capture_output=False, check=False, **kwargs):
     return CompletedProcess(args, retcode, stdout, stderr)
 
 
-def sanitize(*args, **kwargs):
-    """Run the embedded ots-sanitize executable with the list of positional
-    arguments (strings).
-    Return an ots.CompletedProcess object with the following attributes:
+def run_checks(*args, **kwargs):
+    """Run the embedded FontValidator executable with the list
+    of positional arguments (strings).
+    Return a fval.CompletedProcess object with the following attributes:
     args, returncode, stdout, stderr.
     If check=True, and the subprocess exits with a non-zero exit code, an
-    ots.CalledProcessError exception will be raised.
+    fval.CalledProcessError exception will be raised.
     If capture_output=True, stdout and stderr will be captured.
     All extra keyword arguments are forwarded to subprocess.Popen constructor.
     """
-    return _run([OTS_SANITIZE] + list(args), **kwargs)
+    return _run([FONT_VALIDATOR] + list(args), **kwargs)

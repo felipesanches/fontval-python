@@ -12,6 +12,19 @@ function pre_build {
     # https://github.com/travis-ci/travis-ci/issues/3412#issuecomment-83993903
     # https://github.com/pypa/setuptools_scm/issues/93
     git fetch --unshallow
+
+    pushd /usr/src
+    yum -y install gcc gcc-c++ libtool bison autoconf automake wget cmake
+    # wget http://download.mono-project.com/sources/mono/mono-5.16.0.179.tar.bz2
+    # wget http://download.mono-project.com/sources/mono/mono-5.8.0.88.tar.bz2
+    # OK # wget http://download.mono-project.com/sources/mono/mono-3.12.0.tar.bz2
+    wget http://download.mono-project.com/sources/mono/mono-4.2.2.29.tar.bz2
+    tar -xjf mono-4.2.2.29.tar.bz2
+    cd mono-*
+    ./configure --prefix=/usr > /dev/null
+    make -s > /dev/null
+    make -s install > /dev/null
+    popd
 }
 
 function run_tests {
@@ -20,7 +33,7 @@ function run_tests {
 
     # Get absolute path to the pre-compiled wheel
     wheelhouse=$(abspath wheelhouse)
-    wheel=$(ls ${wheelhouse}/opentype_sanitizer*.whl | head -n 1)
+    wheel=$(ls ${wheelhouse}/font_validator*.whl | head -n 1)
     if [ ! -e "${wheel}" ]; then
         echo "error: can't find wheel in ${wheelhouse} folder" 1>&2
         exit 1
